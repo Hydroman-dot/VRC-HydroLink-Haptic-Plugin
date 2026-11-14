@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "pluginId": "hydro.haptic.esb",
+  "oscPrefix": "/avatar/parameters/",
+  "parameters": [
+    {
+      "role": "left",
+      "name": "HydroHaptic/Left",
+      "type": "Float",
+      "default": 0,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "role": "right",
+      "name": "HydroHaptic/Right",
+      "type": "Float",
+      "default": 0,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "role": "enabled",
+      "name": "HydroHaptic/Enabled",
+      "type": "Bool",
+      "default": false
+    },
+    {
+      "role": "heartbeat",
+      "name": "HydroHaptic/Heartbeat",
+      "type": "Bool",
+      "default": false
+    },
+    {
+      "role": "intensity",
+      "name": "HydroHaptic/Intensity",
+      "type": "Float",
+      "default": 0.5,
+      "min": 0,
+      "max": 1
+    }
+  ],
+  "saved": false,
+  "networkSynced": false,
+  "heartbeatToggleTargetMs": 40,
+  "heartbeatExpiryMs": 100,
+  "motorMaximumPercent": 60,
+  "armRequiresZeroInputs": true,
+  "unityPackageCreated": true
+}

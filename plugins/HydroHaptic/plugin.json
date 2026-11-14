@@ -1,0 +1,11 @@
+{
+  "id": "hydro.haptic.esb",
+  "name": "Hydro Haptic ESB",
+  "assembly": "HydroHaptic.dll",
+  "version": "1.0.0",
+  "apiVersion": 1,
+  "gitHubRepository": "Hydroman-dot/VRC-HydroLink-Haptic-Plugin",
+  "minimumHydroLinkVersion": "0.17.3",
+  "requiresOsc": true,
+  "entryType": "HydroHaptic.HapticPlugin"
+}
