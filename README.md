@@ -18,3 +18,7 @@ Avatarvorschau arbeitet ohne Node. Funkanzeige zeigt empfangene eindeutige Paket
 Das Plugin-ZIP enthält keine Firmware und flasht keine Geräte. Drei-Sekunden-Abschaltung setzt die dazugehörige Node-/Dongle-Firmware voraus; die lokale Firmware entscheidet unabhängig. Getesteter Stand: Node0dBm/3s, DongleVersion7 mit Empfangsstatistik. Andere Firmware kann früher stoppen oder keine Statistik liefern.
 
 Softwaretests für Eingänge, STOP, automatische Freigabe, UI-Erstellung und Protokollparser bestanden. Es handelt sich weiterhin um einen Prototyp; keine allgemeine Hardware- oder Langzeitgarantie. Der Unity-Wizard wird separat verteilt.
+
+## 1.0.1 — zuverlässiger Startwert für die Intensität
+
+Benötigt HydroLink 0.17.4. Ein nach dem Plugin-/Avatarwechsel unveränderter Intensitätsparameter wird einmalig aus einer frischen, zum aktuellen Avatar passenden OSCQuery-Abfrage übernommen, solange noch kein Live-Intensitätswert vorliegt. Kontakte, Aktivierung und Lebenszeichen bleiben ausschließlich live; der 100-ms-Lebenszeichen-Watchdog bleibt erhalten. Die Vorschau zeigt fehlende Parameter einzeln und unterscheidet den Intensitäts-Startwert von Live-OSC. 12 hardwarefreie Prüfungen decken die Initialisierung und ihre Grenzen ab.

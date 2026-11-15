@@ -35,6 +35,8 @@ internal sealed class HapticOutput(IPluginContext context) : IComponent
     private long testUntil;
     private bool testPending;
     private int testLeft, testRight;
+    private string currentAvatar="";
+    private DateTimeOffset inputEpoch=DateTimeOffset.UtcNow;
     private readonly AvatarInput avatar = new();
     private readonly AvatarInput preview = new();
     private LinkStatistics? linkStatistics;
@@ -80,10 +82,20 @@ internal sealed class HapticOutput(IPluginContext context) : IComponent
         {
             lock (gate) { preview.Receive(e.Topic, e.Value, Now); if (avatarMode && !avatar.Receive(e.Topic, e.Value, Now)) RequestStop(); }
         }));
+        subscriptions.Add(context.Bus.Subscribe("osc/query-value/avatar/parameters",e=>{
+            lock(gate) {
+                // A plugin started after the OSC service may have missed the avatar-id event.
+                if(currentAvatar.Length==0 && e.Value.ValueKind==System.Text.Json.JsonValueKind.Object &&
+                   e.Value.TryGetProperty("avatar",out var identity) && identity.ValueKind==System.Text.Json.JsonValueKind.String &&
+                   e.Value.TryGetProperty("queryStarted",out var time) && time.ValueKind==System.Text.Json.JsonValueKind.String &&
+                   time.TryGetDateTimeOffset(out var started) && started>=inputEpoch && started<=DateTimeOffset.UtcNow && DateTimeOffset.UtcNow-started<TimeSpan.FromSeconds(5)) currentAvatar=identity.GetString() ?? "";
+                preview.SeedIntensity(e.Topic,e.Value,currentAvatar,inputEpoch); avatar.SeedIntensity(e.Topic,e.Value,currentAvatar,inputEpoch);
+            }
+        }));
         subscriptions.Add(context.Bus.Subscribe("osc/target-changed", _ => RequestStop()));
         subscriptions.Add(context.Bus.Subscribe("osc/query-lost", _ => RequestStop()));
         subscriptions.Add(context.Bus.Subscribe("routing/reset", _ => RequestStop()));
-        subscriptions.Add(context.Bus.Subscribe("osc/avatar-id", _ => { lock (gate) { avatar.Reset(); preview.Reset(); RequestStop(); } }));
+        subscriptions.Add(context.Bus.Subscribe("osc/avatar-id", e => { lock (gate) { currentAvatar=e.Value.ValueKind==System.Text.Json.JsonValueKind.String?e.Value.GetString() ?? "":""; inputEpoch=DateTimeOffset.UtcNow; avatar.Reset(); preview.Reset(); RequestStop(); } }));
         worker = Task.Run(() => Run(stop.Token), CancellationToken.None);
         return Task.CompletedTask;
     }
@@ -336,7 +348,7 @@ internal sealed class HapticOutput(IPluginContext context) : IComponent
             try
             {
                 var updated = new AvatarParameters { Left = fields[0].Text.Trim(), Right = fields[1].Text.Trim(), Enabled = fields[2].Text.Trim(), Heartbeat = fields[3].Text.Trim(), Intensity = fields[4].Text.Trim() };
-                updated.Save(); lock (gate) { preview.Reset(); avatar.Reset(); preview.Parameters = avatar.Parameters = updated; }
+                updated.Save(); lock (gate) { inputEpoch=DateTimeOffset.UtcNow; preview.Reset(); avatar.Reset(); preview.Parameters = avatar.Parameters = updated; }
                 feedback.Text = "Parameternamen gespeichert · Motoren gesperrt.";
             }
             catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException) { feedback.Text = ex.Message; }
@@ -367,7 +379,7 @@ internal sealed class HapticOutput(IPluginContext context) : IComponent
                 }
                 else { receptionLabel.Text = "Funkempfang: noch keine Messwerte (Dongle-Firmware mit Empfangsstatistik erforderlich)."; receptionBar.Value = 0; }
                 var pv = preview.Preview();
-                previewLabel.Text = pv is { } v ? $"Avatar-Vorschau {(Now - preview.PreviewUpdatedAt >= 1000 ? "(veraltet; letzte Werte)" : "(aktuell)")}: Links {v.Left:0}% / Rechts {v.Right:0}% · Motor-Soll mit Intensität: {v.MotorLeft:0}% / {v.MotorRight:0}% · keine Bestätigung der Motorausgabe" : "Avatar-Vorschau: warte auf Links-, Rechts- und Intensitätsparameter (kein Node erforderlich).";
+                previewLabel.Text = pv is { } v ? $"Avatar-Vorschau {(Now - preview.PreviewUpdatedAt >= 1000 ? "(veraltet; letzte Werte)" : "(aktuell)")}: Links {v.Left:0}% / Rechts {v.Right:0}% · Motor-Soll mit Intensität: {v.MotorLeft:0}% / {v.MotorRight:0}% · Intensität aus {(preview.IntensityFromQuery ? "OSCQuery-Startwert" : "Live-OSC")} · keine Bestätigung der Motorausgabe" : "Avatar-Vorschau: fehlt noch " + preview.MissingPreviewParameters + " (kein Node erforderlich).";
                 connection.Text = $"Dongle: {(dongleConnected ? "verbunden" : "nicht verbunden")}  ·  COM-Port: {(currentPort.Length > 0 ? currentPort : "noch nicht gefunden")}  ·  Node: {(ready ? "online" : "nicht erreichbar")}";
                 bool avatarReady = !avatarMode || avatar.CanAutoArm(Now);
                 arm.IsEnabled = !avatarMode && ready && !active && !armRequest && !testPending && avatarReady;

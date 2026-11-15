@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><Version>1.0.0</Version><EnableDynamicLoading>true</EnableDynamicLoading></PropertyGroup>
+  <PropertyGroup><TargetFramework>net8.0-windows</TargetFramework><UseWPF>true</UseWPF><Version>1.0.1</Version><EnableDynamicLoading>true</EnableDynamicLoading></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/HydroLink.Sdk/HydroLink.Sdk.csproj"/>
     <PackageReference Include="System.IO.Ports" Version="8.0.0"/>

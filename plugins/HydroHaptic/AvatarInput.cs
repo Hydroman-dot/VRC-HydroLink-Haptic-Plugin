@@ -43,12 +43,23 @@ internal sealed class AvatarInput
     private bool haveLeft, haveRight, enabled, haveHeartbeat, heartbeat, haveEdge;
     private long lastEdge;
     private bool stoppedByPc, sawDisabledAfterStop;
+    internal bool IntensityFromQuery { get; private set; }
+    internal string MissingPreviewParameters => string.Join(", ",new[]{haveLeft?null:"Links",haveRight?null:"Rechts",haveIntensity?null:"Intensität"}.Where(x=>x is not null));
+    internal bool SeedIntensity(string topic,JsonElement payload,string currentAvatar,DateTimeOffset epoch)
+    {
+        if(haveIntensity || string.IsNullOrEmpty(currentAvatar) || topic!="osc/query-value/avatar/parameters/"+Parameters.Intensity || payload.ValueKind!=JsonValueKind.Object) return false;
+        if(!payload.TryGetProperty("avatar",out var identity) || identity.ValueKind!=JsonValueKind.String || identity.GetString()!=currentAvatar ||
+           !payload.TryGetProperty("queryStarted",out var time) || time.ValueKind!=JsonValueKind.String || !time.TryGetDateTimeOffset(out var started) ||
+           started<epoch || DateTimeOffset.UtcNow-started>TimeSpan.FromSeconds(5) || started>DateTimeOffset.UtcNow ||
+           !payload.TryGetProperty("value",out var value) || value.ValueKind!=JsonValueKind.Number || !value.TryGetDouble(out var v) || !double.IsFinite(v) || v<0 || v>1) return false;
+        intensity=v; haveIntensity=true; IntensityFromQuery=true; return true;
+    }
     internal bool DesiredEnabled => enabled;
     internal bool StoppedByPc => stoppedByPc;
     internal void StopByPc() { stoppedByPc = true; sawDisabledAfterStop = false; Disarm(); }
     internal bool CanAutoArm(long now) => !stoppedByPc && TryRead(now, out _, out _);
     internal long PreviewUpdatedAt { get; private set; }
-    internal void Reset() { left = right = intensity = 0; haveIntensity = false; haveLeft = haveRight = enabled = haveHeartbeat = haveEdge = false; }
+    internal void Reset() { left = right = intensity = 0; haveIntensity = false; IntensityFromQuery=false; haveLeft = haveRight = enabled = haveHeartbeat = haveEdge = false; }
     internal void Disarm() { haveEdge = false; }
     internal bool Receive(string topic, JsonElement value, long now)
     {
@@ -62,7 +73,7 @@ internal sealed class AvatarInput
             { Reset(); return false; }
             if (name == Parameters.Left) { left = v; haveLeft = true; }
             else if (name == Parameters.Right) { right = v; haveRight = true; }
-            else { intensity = v; haveIntensity = true; }
+            else { intensity = v; haveIntensity = true; IntensityFromQuery=false; }
         }
         else if (name == Parameters.Enabled || name == Parameters.Heartbeat)
         {

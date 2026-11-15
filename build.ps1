@@ -1,4 +1,6 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
+dotnet run --project "$PSScriptRoot/tests/HydroHaptic.Tests.csproj" -c Release
+if($LASTEXITCODE -ne 0){throw 'Tests failed'}
 dotnet build "$PSScriptRoot/plugins/HydroHaptic/HydroHaptic.csproj" -c Release
 if($LASTEXITCODE -ne 0){throw 'Build failed'}
 $m=Get-Content "$PSScriptRoot/plugins/HydroHaptic/plugin.json" -Raw | ConvertFrom-Json

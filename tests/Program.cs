@@ -1,0 +1,23 @@
+using HydroHaptic;
+using System.Text.Json;
+int checks=0;
+void Check(bool ok,string name) { if(!ok) throw new Exception(name); Console.WriteLine("PASS: "+name); checks++; }
+var input=new AvatarInput(); var epoch=DateTimeOffset.UtcNow.AddSeconds(-2);
+JsonElement Snapshot(double value,string avatar="avatar-a",DateTimeOffset? started=null)=>JsonSerializer.SerializeToElement(new {value,avatar,queryStarted=started??DateTimeOffset.UtcNow.AddMilliseconds(-100)});
+bool Seed(double v,string avatar="avatar-a",DateTimeOffset? started=null)=>input.SeedIntensity("osc/query-value/avatar/parameters/HydroHaptic/Intensity",Snapshot(v,avatar,started),"avatar-a",epoch);
+Check(!Seed(.7,"avatar-b"),"wrong avatar rejected");
+Check(!Seed(.7,started:DateTimeOffset.UtcNow.AddSeconds(-10)),"stale snapshot rejected");
+Check(!Seed(.7,started:epoch.AddMilliseconds(-1)),"snapshot predating plugin epoch rejected");
+Check(!Seed(.7,started:DateTimeOffset.UtcNow.AddSeconds(1)),"future snapshot rejected");
+Check(!Seed(2),"invalid intensity rejected");
+Check(!input.SeedIntensity("osc/query-value/avatar/parameters/HydroHaptic/Left",Snapshot(.7),"avatar-a",epoch),"contact snapshot never used as motor input");
+Check(Seed(.7) && input.IntensityFromQuery,"missing static intensity initialized from fresh query");
+Check(!input.TryRead(0,out _,out _),"query intensity cannot arm output or renew heartbeat");
+void Live(string name,object value,long now)=>input.Receive("osc/value/avatar/parameters/HydroHaptic/"+name,JsonSerializer.SerializeToElement(value),now);
+Live("Left",.5,1); Live("Right",.25,1); Live("Enabled",true,1); Live("Heartbeat",false,1); Live("Heartbeat",true,2);
+Check(input.TryRead(3,out var left,out var right) && left==21 && right==11,"live gates and contacts use initialized intensity");
+Live("Intensity",.2,4);
+Check(!Seed(.9) && !input.IntensityFromQuery && input.TryRead(5,out left,out right) && left==6,"live intensity takes precedence over later snapshots");
+Check(!input.TryRead(200,out _,out _),"query initialization does not bypass heartbeat timeout");
+input.Reset(); Check(input.MissingPreviewParameters.Contains("Intensität"),"avatar reset removes initial intensity");
+Console.WriteLine($"FINAL: {checks} headpad checks passed.");
